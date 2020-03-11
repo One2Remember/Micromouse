@@ -264,7 +264,8 @@ def execute_shortest_path(sol):
 
 def main():
     log("Running...")
-    dfs_map_maze()  # start and end facing north at initial position after maze has been mapped
+    dfs_map_maze()  # start facing north at initial position and end back at initial position after maze has been mapped
+    set_dir(0)      # reset heading to north
     solution = find_bfs_shortest_path()  # find the shortest path to solution using breadth first search
     execute_shortest_path(solution)   # execute the shortest path solution once found
     log("Done!")
