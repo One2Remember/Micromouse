@@ -1,16 +1,12 @@
 # class containing location: all data associated with a square
 class Location:
-    def __init__(self):
+    def __init__(self, pos=None):
         self.walls = [False, False, False, False]
         self.position = [-1, -1]
         self.visited = False
-
-    def __init__(self, pos):
-        self.walls = [False, False, False, False]
-        self.position = [-1, -1]
-        self.visited = False
-        self.position[0] = pos[0]
-        self.position[1] = pos[1]
+        if pos is not None:
+            self.position[0] = pos[0]
+            self.position[1] = pos[1]
 
     # takes position as ordered pair list [x,y]
     def set_position(self, pos):

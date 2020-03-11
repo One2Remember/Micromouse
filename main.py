@@ -1,10 +1,8 @@
-import time
-from typing import List, Tuple
-
-import API
 import sys
+from queue import LifoQueue, Queue
+import API
 import location
-from queue import LifoQueue
+import state
 
 MAZE_WIDTH = 16
 MAZE_HEIGHT = 16
@@ -16,17 +14,25 @@ MAZE_HEIGHT = 16
 # 3 = West
 cur_direction = 0
 
-# for tracking global position in maze as [x, y], initialized to [0, 0]
+# for tracking global 'physical' position in maze as [x, y], initialized to [0, 0]
 cur_position = [0, 0]
+
+# for tracking 'virtual' position when
 
 # for tracking all maze data, create 2d array of Locations
 maze = [[location.Location([i, j]) for j in range(0, MAZE_WIDTH)] for i in range(0, MAZE_HEIGHT)]
 
-# location object stack for tracking locations that may need to be explored
+# location object stack for tracking locations that may need to be explored during mapping
 loc_stack = LifoQueue()
 
-# direction stack for easy backtracking through maze when a dead end is found
+# direction stack for easy backtracking through maze when a dead end is found during mapping
 dir_stack = LifoQueue()
+
+# action stack for processing optimal sequence of actions to find goal state
+act_stack = LifoQueue()
+
+# state object stack for unexplored nodes during breadth first search
+frontier = Queue()
 
 
 # update position (-1 is move backward, 1 is move forward), currently only ever moves forward
@@ -48,20 +54,6 @@ def update_direction(turn_direction):
     cur_direction = (cur_direction + turn_direction) % 4
 
 
-# given a list of bools representing walls, return string representing state (for debugging)
-# example:
-#   INPUT: bool_list = [True, False, True, False] means walls to the north and south but not east or west
-#   OUTPUT: "YNYN" encodes the same data in string form
-# def wall_bools_to_string(bool_list):
-#     my_string = ""
-#     for i in range(0, 4):  # for iterating through all four walls
-#         if bool_list[i]:  # if wall at position i is True set char to 'W' for wall
-#             my_string = my_string + 'Y'
-#         else:  # else set to 'N' for no wall
-#             my_string = my_string + 'N'
-#     return my_string
-
-
 # returns list of walls around current state
 # example:
 #   OUTPUT: [False, True, False, True] means walls to the north and south but not east or west
@@ -76,10 +68,20 @@ def get_walls():
     return walls
 
 
-# marks a given node that it has been visited (usually takes cur_position)
-def mark_visited_api(pos=cur_position):
+# marks a given node that it has been visited (usually takes cur_position, but can take any position)
+def mark_visited_api(pos=None):
+    if pos is None:
+        pos = cur_position
     API.setColor(pos[0], pos[1], "G")
     API.setText(pos[0], pos[1], "hit")  # drop string containing info on square
+
+
+# marks a given node that it is part of the solution path (usually takes cur_position)
+def mark_solution_api(pos=None):
+    if pos is None:
+        pos = cur_position
+    API.setColor(pos[0], pos[1], "B")
+    API.setText(pos[0], pos[1], "Sol")
 
 # for printing to mms console
 def log(string):
@@ -104,10 +106,12 @@ def turn_right():
     API.turnRight()
     update_direction(+1)  # we are turning right
 
+
 # take all actions to turn around
 def turn_around():
     turn_right()
     turn_right()
+
 
 # change direction to specific direction
 def set_dir(_dir):
@@ -141,7 +145,7 @@ def turn_toward(loc):
     set_dir(_dir)
 
 
-# maps maze in depth first search using loc_stack, takes dir = 0, 1, 2, or 3 for N, E, S, W
+# maps maze in depth first search using loc_stack
 def dfs_map_maze():
     cur_loc = maze[cur_position[0]][cur_position[1]]  # create new ref to current location object for easier reference
 
@@ -174,16 +178,16 @@ def dfs_map_maze():
                 set_dir(dir_stack.get())  # restore last direction when at this location
                 dfs_map_maze()  # try to move again
             return
-        next_loc = loc_stack.get()  # take the first location off of the loc_stack
+        next_loc = loc_stack.get()  # otherwise, take locations off of the loc_stack until we get an unvisited one
         if not next_loc.visited:
             break
 
     # if I can move to that location from where I am, save current direction, turn toward new location, and move forward
     if cur_loc.can_move_to(next_loc):
-        dir_stack.put(cur_direction)  # save current direction for backtracking
+        dir_stack.put(cur_direction)  # save current direction for backtracking on the direction stack
         turn_toward(next_loc)
         move_forward()
-    # otherwise, put it back on the loc_stack, move backward, restore my direction from when I was last there
+    # if i can't get there from here, put it back on the loc_stack, move backward, restore my prior direction
     else:
         loc_stack.put(next_loc)
         turn_around()
@@ -191,9 +195,81 @@ def dfs_map_maze():
         set_dir(dir_stack.get())    # restore last direction when at this location
     dfs_map_maze()  # try to move again
 
+
+# defines breadth-first-search for finding optimal route to maze center
+def find_bfs_shortest_path():
+    # initialize all locations to unvisited
+    for i in range(0, MAZE_HEIGHT):
+        for j in range(0, MAZE_WIDTH):
+            maze[i][j].visited = False;
+    first_state = state.State(maze[0][0])  # generate initial state: parent is self, action is null
+    frontier.put(first_state)   # push first state to queue
+    # while queue is not empty
+    while not frontier.empty():
+        next_state = frontier.get()  # dequeue next state
+        # mark state location as visited
+        maze[next_state.location.position[0]][next_state.location.position[1]].set_visited(True)
+        if next_state.is_goal():  # if it is goal
+            return next_state    # return it
+        # provide new references to my location and possible adjacent locations for easier reference in code below
+        my_loc = next_state.location
+        if not my_loc.walls[0]:
+            north_loc = maze[my_loc.position[0]][my_loc.position[1] + 1]
+        if not my_loc.walls[1]:
+            east_loc  = maze[my_loc.position[0] + 1][my_loc.position[1]]
+        if not my_loc.walls[2]:
+            south_loc = maze[my_loc.position[0]][my_loc.position[1] - 1]
+        if not my_loc.walls[3]:
+            west_loc  = maze[my_loc.position[0] - 1][my_loc.position[1]]
+
+        # if the position north has not been visited and I can reach it, generate a new state representing the new
+        # location, with this location as its parent, and and the proper number of turns needed to reach it
+        if not my_loc.walls[0] and my_loc.can_move_to(north_loc) and not north_loc.visited:
+            # create a new state where i move from my_location to the north
+            north_state = state.State(north_loc, next_state, (0 - next_state.cur_dir) % 4, 0)
+            frontier.put(north_state)  # add it to the frontier queue
+
+        # if the position east has not been visited and I can reach it, generate a new state representing the new
+        # location, with this location as its parent, and and the proper number of turns needed to reach it
+        if not my_loc.walls[1] and my_loc.can_move_to(east_loc) and not east_loc.visited:
+            # create a new state where i move from my_location east
+            east_state = state.State(east_loc, next_state, (1 - next_state.cur_dir) % 4, 1)
+            frontier.put(east_state)  # add it to the frontier queue
+
+        # if the position south has not been visited and I can reach it, generate a new state representing the new
+        # location, with this location as its parent, and and the proper number of turns needed to reach it
+        if not my_loc.walls[2] and my_loc.can_move_to(south_loc) and not south_loc.visited:
+            # create a new state where i move from my_location south
+            south_state = state.State(south_loc, next_state, (2 - next_state.cur_dir) % 4, 2)
+            frontier.put(south_state)  # add it to the frontier queue
+
+        # if the position west has not been visited and I can reach it, generate a new state representing the new
+        # location, with this location as its parent, and and the proper number of turns needed to reach it
+        if not my_loc.walls[3] and my_loc.can_move_to(west_loc) and not west_loc.visited:
+            # create a new state where i move from my_location west
+            west_state = state.State(west_loc, next_state, (3 - next_state.cur_dir) % 4, 3)
+            frontier.put(west_state)  # add it to the frontier queue
+
+# takes a solution state and uses it to physically traverse the maze - this constitutes the fastest possible run
+def execute_shortest_path(sol):
+    while sol.parent is not sol:    # while i have not reached the home position
+        act_stack.put(sol.action)  # push action to stack
+        sol = sol.parent    # traverse up to parent
+    while not act_stack.empty():    # pop off actions from the stack and execute them in the maze
+        act = act_stack.get()
+        mark_solution_api() # mark my square as part of the solution
+        if act is 1:
+            turn_right()
+        elif act is 3:
+            turn_left()
+        move_forward()
+
+
 def main():
     log("Running...")
-    dfs_map_maze()  # start facing north at initial position
+    dfs_map_maze()  # start and end facing north at initial position after maze has been mapped
+    solution = find_bfs_shortest_path()  # find the shortest path to solution using breadth first search
+    execute_shortest_path(solution)   # execute the shortest path solution once found
     log("Done!")
 
 
