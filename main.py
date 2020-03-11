@@ -167,7 +167,12 @@ def dfs_map_maze():
             loc_stack.put(maze[cur_position[0] - 1][cur_position[1]])
 
     while True:  # do while loop to get next available position if it exists and has not been visited already
-        if loc_stack.empty():  # if loc_stack is empty, return
+        if loc_stack.empty():  # if loc_stack is empty, backtrack to initial position then return
+            if not cur_position == [0, 0]:
+                turn_around()
+                move_forward()
+                set_dir(dir_stack.get())  # restore last direction when at this location
+                dfs_map_maze()  # try to move again
             return
         next_loc = loc_stack.get()  # take the first location off of the loc_stack
         if not next_loc.visited:
