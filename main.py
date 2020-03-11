@@ -68,7 +68,7 @@ def get_walls():
     return walls
 
 
-# marks a given node that it has been visited (usually takes cur_position, but can take any position)
+# marks a given node green that it has been visited (usually takes cur_position, but can take any position)
 def mark_visited_api(pos=None):
     if pos is None:
         pos = cur_position
@@ -76,12 +76,27 @@ def mark_visited_api(pos=None):
     API.setText(pos[0], pos[1], "hit")  # drop string containing info on square
 
 
-# marks a given node that it is part of the solution path (usually takes cur_position)
+# marks a given node blue that it is part of the solution path (usually takes cur_position)
 def mark_solution_api(pos=None):
     if pos is None:
         pos = cur_position
     API.setColor(pos[0], pos[1], "B")
     API.setText(pos[0], pos[1], "Sol")
+
+# marks a given node cyan that it is part of the bfs (usually takes cur_position)
+def mark_bfs_api(pos=None):
+    if pos is None:
+        pos = cur_position
+    API.setColor(pos[0], pos[1], "c")
+    API.setText(pos[0], pos[1], "dfs")
+
+# marks a node orange that has been used in the backtracking part of the algorithm (usually takes cur_position)
+def mark_bktrk_api(pos=None):
+    if pos is None:
+        pos = cur_position
+    API.setColor(pos[0], pos[1], "o")
+    API.setText(pos[0], pos[1], "bktrk")
+
 
 # for printing to mms console
 def log(string):
@@ -206,6 +221,7 @@ def find_bfs_shortest_path():
         next_state = frontier.get()  # dequeue next state
         # mark state location as visited
         maze[next_state.location.position[0]][next_state.location.position[1]].set_visited(True)
+        mark_bfs_api(next_state.location.position)  # mark it on the API for fun
         if next_state.is_goal():  # if it is goal
             return next_state    # return it
         # provide new references to my location and possible adjacent locations for easier reference in code below
@@ -251,6 +267,7 @@ def find_bfs_shortest_path():
 def execute_shortest_path(sol):
     while sol.parent is not sol:    # while i have not reached the home position
         act_stack.put(sol.action)   # push action to stack
+        mark_bktrk_api(sol.location.position)  # mark the backtrack on the maze just for fun
         sol = sol.parent    # traverse up to parent
     while not act_stack.empty():    # pop off actions from the stack and execute them in the maze
         act = act_stack.get()
