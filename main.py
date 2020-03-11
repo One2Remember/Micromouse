@@ -173,26 +173,23 @@ def dfs_map_maze():
     while True:  # do while loop to get next available position if it exists and has not been visited already
         if loc_stack.empty():  # if loc_stack is empty, backtrack to initial position then return
             if not cur_position == [0, 0]:
-                turn_around()
+                set_dir((dir_stack.get() + 2) % 4)  # turn around
                 move_forward()
-                set_dir(dir_stack.get())  # restore last direction when at this location
                 dfs_map_maze()  # try to move again
             return
         next_loc = loc_stack.get()  # otherwise, take locations off of the loc_stack until we get an unvisited one
         if not next_loc.visited:
             break
 
-    # if I can move to that location from where I am, save current direction, turn toward new location, and move forward
+    # if I can move to that location from where I am, turn toward new location, save that direction, and move forward
     if cur_loc.can_move_to(next_loc):
-        dir_stack.put(cur_direction)  # save current direction for backtracking on the direction stack
         turn_toward(next_loc)
+        dir_stack.put(cur_direction)  # save current direction for backtracking on the direction stack
         move_forward()
-    # if i can't get there from here, put it back on the loc_stack, move backward, restore my prior direction
-    else:
+    else:   # put the target location back on the loc_stack, back up one square, then try again
         loc_stack.put(next_loc)
-        turn_around()
+        set_dir((dir_stack.get() + 2) % 4)  # turn toward last position
         move_forward()
-        set_dir(dir_stack.get())    # restore last direction when at this location
     dfs_map_maze()  # try to move again
 
 
@@ -253,11 +250,11 @@ def find_bfs_shortest_path():
 # takes a solution state and uses it to physically traverse the maze - this constitutes the fastest possible run
 def execute_shortest_path(sol):
     while sol.parent is not sol:    # while i have not reached the home position
-        act_stack.put(sol.action)  # push action to stack
+        act_stack.put(sol.action)   # push action to stack
         sol = sol.parent    # traverse up to parent
     while not act_stack.empty():    # pop off actions from the stack and execute them in the maze
         act = act_stack.get()
-        mark_solution_api() # mark my square as part of the solution
+        mark_solution_api()  # mark my square as part of the solution on the maze
         if act is 1:
             turn_right()
         elif act is 3:
