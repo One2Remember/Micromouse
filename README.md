@@ -9,3 +9,4 @@ Contains a class, "Location" which contains all data to track a specific square 
 
 ### main.py
 Contains the main program which utilizes a recursive depth first search algorithm to map an mms maze. So far it can solve all of mackorone's mazes (though perhaps not as quickly as I'd like) and will stop once the entire searchable portion of the maze has been visited
+**Note: this does use global variables for simplifying various function calls from requiring additional positional arguments**
