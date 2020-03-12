@@ -1,5 +1,5 @@
 # Micromouse
-Python implementation of micromouse maze solving algorithms for use with [mackarone's mms applet](https://github.com/mackorone/mms)
+Python implementation of micromouse maze solving algorithms for use with [mackarone's mms applet](https://github.com/mackorone/mms). Soon, this will be used as the base for software which will live onboard an autonomous micromouse for use in CSU East Bay's IEEE Region 6 Central Area Micromouse Competition
 
 ### API.py
 Contains mackorone's mms API so that my program can interface with their applet
