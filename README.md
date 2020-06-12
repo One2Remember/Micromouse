@@ -1,5 +1,5 @@
 # Micromouse
-Python implementation of [micromouse](https://en.wikipedia.org/wiki/Micromouse) maze solving algorithms for use with [mackarone's mms applet](https://github.com/mackorone/mms). Soon, this will be used as the base for software which will live onboard an autonomous micromouse for use in IEEE's Region 6 Central Area Micromouse Competition hosted at CSU East Bay Spring 2020. Currently, the code is fully functional with mackarone's applet and can map, solve, and run every maze efficiently
+Python implementation of [micromouse](https://en.wikipedia.org/wiki/Micromouse) maze solving algorithms for use with [mackarone's mms applet](https://github.com/mackorone/mms). Soon, this will be used as the base for software which will live onboard an autonomous micromouse for use in IEEE's Region 6 Central Area Micromouse Competition which was going to be hosted at CSU East Bay Spring 2020, but has been indefinitely postponed due to Covid-19. Currently, the code is fully functional with mackarone's applet and can map, solve, and run every maze efficiently
 
 ## Demonstration
 [YouTube demonstration of my source in action can be found here!](https://youtu.be/6y4nrnfZ1k0)
